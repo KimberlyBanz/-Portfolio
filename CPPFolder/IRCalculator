@@ -1,0 +1,143 @@
+/*
+        To be used with Arduino IR receiver. See .ino file for mapping of buttons to arithmetic functions
+		
+        Source:
+        CSCI 2021
+		Kevin Lee
+			
+		This evaluates a simple integer arithmetic
+		expression contained in a text string 
+		
+		e.g "45 + 36" will evaluate to be 81
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+
+char getIntFromString(char *pStr, int *val, int *endPos);
+void eatSpaces(char *pStr, int *endPos);
+char evaluateEquationStr(char *pEquationString, int *answer);
+
+void printStringAsHex(char *pStr);
+
+/*
+	The main program is just a driver to test our
+	evaluateEquationStr function before we take 
+	it over to the arduino
+
+*/
+int main()
+{
+	char equationString[80];
+	int answer;
+	
+	while(1){ //infinite loop!!!
+		printf("Enter equation string\n");
+		gets(equationString);
+		printStringAsHex(equationString);//for debugging
+
+		if(evaluateEquationStr(equationString, &answer))
+		{
+			printf("%d\n\n", answer);
+		}else{
+		printf("error in expression\n\n");
+		}
+	}//while
+}
+
+/*
+    returns 1 if it found an integer
+    return 0 if did not find a digit
+*/
+char getIntFromString(char *pStr, int *val, int *endPos)
+{
+    int pos = 0;
+    char digit;
+    
+    char success = 1;
+    *val = 0;
+    
+   eatSpaces(pStr, &pos);
+	
+	digit = pStr[pos];
+	if (digit >= '0' && digit <= '9'){
+		*val = digit - '0'; //get the numeric value
+		pos++;
+		digit = pStr[pos];
+		while (digit >= '0' && digit <= '9'){
+		   *val = *val * 10 + digit - '0';
+		    pos++;
+		    digit = pStr[pos];
+		}
+	}else{
+		success = 0;
+	}
+	
+	*endPos = pos;
+	return success; }
+
+/*
+	move endPos past any spaces in the string
+*/
+void eatSpaces(char *pStr, int *endPos)
+{
+	while(pStr[*endPos] == ' '){
+		++(*endPos);
+	}
+}
+
+/*
+	given a simple text string representing an integer
+	expression try to evaluate the expression
+	assuming integer operand integer
+	operand is '+', '-', '*', '/', '%'
+*/
+char evaluateEquationStr(char *pEquationString, int *answer)
+{
+	int operand1, operand2, pos = 0;
+	char op, success = 0;
+
+	if(getIntFromString(pEquationString, &operand1, &pos))
+	{
+		printf("operand1 = %d\n", operand1);
+		eatSpaces(pEquationString, &pos);
+		op = pEquationString[pos]; ++pos;//the operator
+		printf("%c\n", op);
+		if(getIntFromString(&pEquationString[pos], &operand2, &pos))
+		{
+			success = 1;
+			printf("operand2 = %d\n", operand2);
+			if (op == '+'){
+				*answer = operand1 + operand2;
+			}else if (op == '*'){
+				*answer = operand1 * operand2;
+			}else if (op == '-'){
+                *answer = operand1 - operand2;
+            } else if (op == '%'){
+                *answer = operand1 % operand2;
+            } else if (op = '/'){
+                *answer = operand1 / operand2;
+            }
+				success = 0;
+			}
+		}
+	}
+	return success;
+}
+
+/*
+		Just to show what is going on
+*/
+void printStringAsHex(char *pStr)
+{
+	int i;
+	for(i = 0; i <= strlen(pStr); ++i){
+		printf("0x%x ", pStr[i]);
+	}
+		printf("\n");
+}
+
+
+
+
