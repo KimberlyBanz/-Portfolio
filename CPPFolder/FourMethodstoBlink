@@ -1,0 +1,103 @@
+/*
+  Blink
+
+  Turns an LED on for one second, then off for one second, repeatedly.
+
+  This sketch has beem modified to introduce ports, assembly language and bit masks 
+
+  Test 4 methods to turn the led on and off using:
+    1. arduino functions
+    2. bitwise operators in C and port variables
+    3. asm and legacy i/o
+    4. asm and memory mapped i/o
+
+    Implement the four methods in the code below.
+    Do a short report with a table that shows the code size (sketch size) of each method.
+    Which method did you expect to be the smallest?
+    Which method did you expect to be the largest? 
+    Did the results match your expectations?
+
+    legacy i/o    memory mapped     register
+     0x0A         0x002A            PortD data direction set-- DDRD
+     0x0B         0x002B            PortD data, input and output 
+
+*/
+
+#define BTN_METHOD 3    //use this constant to decide which method to compile,   
+
+// the setup function runs once when you press reset or power the board
+void setup() {
+
+  Serial.begin(9600);
+  
+#if BTN_METHOD == 1
+   pinMode( 3, OUTPUT ); //use the arduino library functions
+   Serial.println("Using method 1");
+#endif
+
+#if BTN_METHOD == 2
+    //pinMode( 3, OUTPUT );  //use C port variables and masks
+    DDRD = DDRD | 0x08;  //use the variable for the register
+    Serial.println("Using method 2");
+#endif
+
+#if BTN_METHOD == 3
+  pinMode( 3, OUTPUT ); //use asm and legacy io //fix
+  Serial.println("Using method 3");
+#endif
+
+#if BTN_METHOD == 4
+   pinMode( 3, OUTPUT ); //use asm  memory mapped //fix
+   Serial.println("Using method 4");
+#endif
+ 
+}
+
+// the loop function runs over and over again forever
+void loop() {
+  // turn the LED on (HIGH is the voltage level)
+
+#if BTN_METHOD == 1
+  digitalWrite(3, HIGH);    //use the arduino library functions
+#endif
+
+#if BTN_METHOD == 2
+ // digitalWrite(3, HIGH);     //use C port variables and masks
+  PORTD = PORTD | 0x08;
+#endif
+
+#if BTN_METHOD == 3
+  digitalWrite(3, HIGH);    //use asm and legacy io //fix
+#endif
+
+#if BTN_METHOD == 4
+  digitalWrite(3, HIGH);    //use asm  memory mapped //fix
+#endif
+  
+  
+  delay(1000);                       // wait for a second
+ // turn the LED off by making the voltage LOW  
+#if BTN_METHOD == 1
+  digitalWrite(3, LOW);    //use the arduino library functions
+#endif
+
+#if BTN_METHOD == 2
+  //digitalWrite(3, LOW);     //use C port variables and masks
+  PORTD = PORTD & 0xF7;
+#endif
+
+#if BTN_METHOD == 3
+     //use asm and legacy io //fix
+   asm volatile(
+        "cbi 0x0b,3 \n\t"
+        :   //output list
+        :   //input list
+        :   //clobber list
+     );
+#endif
+
+#if BTN_METHOD == 4
+  digitalWrite(3, LOW);    //use asm  memory mapped //fix
+#endif
+  delay(1000);                       // wait for a second
+}
