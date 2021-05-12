@@ -1,0 +1,290 @@
+/*
+ *  Recursive Function Example 
+ * 
+ * 
+ */
+
+
+
+int __attribute__ ((noinline)) fact(int n);
+int __attribute__ ((noinline)) fibb(int n);
+int __attribute__ ((noinline)) myPower(int a, int n);
+int __attribute__ ((noinline)) mySum(int n); // n + (n-1) + (n-2) + ... + 0 
+
+
+
+void __attribute__ ((noinline)) setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+   Serial.begin(9600);
+  int n = 24;
+  int a;
+  int result;
+  char string[80];
+
+do{
+  Serial.println("enter n");
+  do{
+    n = Serial.parseInt();
+  }while (n == 0);
+
+  if (n=1)
+    n = 0;
+
+
+  Serial.println("enter a");
+  do{
+    a = Serial.parseInt();
+  }while (a == 0);
+  
+  
+
+  result = fact(n);
+  sprintf(string, "fact(%d) = %d",  n, result);
+  Serial.println(string);
+
+  
+//
+   result = mySum(n);
+  sprintf(string, "mySum(%d) = %d",  n, result);
+  Serial.println(string);
+
+
+  result = fibb(n);
+  sprintf(string, "fibb(%d) = %d",  n, result);
+  Serial.println(string);
+
+  result = myPower(a, n);
+  sprintf(string, "myPower(%d, %d ) = %d", a,  n, result);
+  Serial.println(string);
+ 
+  Serial.println(" ");
+
+}while (true);
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+
+int __attribute__ ((noinline))  addTwo(int a, int b, int c)
+{
+    int result;
+
+    result = a + b - c;
+    
+    asm volatile(
+     // "movw %0, %1 \n\t" 
+      "mov %A0, %A1 \n\t" //move lowbyte of a to low of result
+      "mov %B0, %B1 \n\t" //move lowbyte of a to low of result
+      "add %A0, %A2 \n\t" //add the low bytes
+      "adc %B0, %B2 \n\t" //add the high bytes
+      "sub %A0, %A3 \n\t" //sub the low bytes
+      "sbc %B0, %B3 \n\t" //sub the high bytes
+      : "=d" (result)   //output list
+      : "a" (a),"a" (b), "a" (c) //input list
+      :    //clobber list
+     );
+
+     return result;
+}
+
+int __attribute__ ((noinline)) fact(int n)
+{
+    int answer;
+//    if (n == 0){ //bottom of recursion
+//      answer = 1;
+//    }else{
+//      answer = n * fact(n-1);
+//    }
+
+       asm volatile(
+       //set up to call our function
+      "mov r24, %A1 \n\t" //move n into r24,r25 to pass to function
+      "mov r25, %B1 \n\t" 
+      "rcall aFact%= \n\t" //the return answer is in r24, r25
+      "mov %A0, r24 \n\t"
+      "mov %B0, r25 \n\t" 
+      "rjmp done%= \n\t" //jump over our function
+      
+      // now for our actual function
+      "aFact%=: nop \n\t"
+      "push r18 \n\t" //this will be our local n
+      "push r19 \n\t" //n
+      "mov r18, r24\n\t" //store n
+      "mov r19, r25 \n\t"
+      "cpi r18, 0 \n\t"  //check for the bottom on recursion
+      "breq one%= \n\t"   
+      "mov r24, r18\n\t" //load n
+      "mov r25, r19 \n\t"
+      "sbiw r24, 1  \n\t"  //n-1 //all set for next function call
+      "rcall aFact%= \n\t" //answer is sitting in r24 and r25, n is in r18 and r19
+      "mul r18, r24 \n\t" //working on n * fact(n-1)
+      "movw r22,r0 \n\t" //r22,r23 <-- r0,r1
+      "mul r18,r25 \n\t" //low byte of n * high byte fact(n-1)
+      "add r23, r0 \n\t" 
+      "eor r1,r1 \n\t" //be a good citizen
+      "movw r24,r22 \n\t" //set the return value
+      "rjmp over%= \n\t"
+      // n == 0
+      "one%=: ldi r24, 1\n\t" //returning a 1
+      "ldi r25,0\n\t"
+      
+      "over%=: pop r19 \n\t"
+      "pop r18 \n\t"
+      "ret \n\t"
+      //end of our function
+      
+      "done%=: nop \n\t"
+      : "=d" (answer)   //output list
+      : "a" (n) //input list
+      :    "r22" , "r23" //clobber list
+     );
+
+    return answer;
+}
+
+int __attribute__ ((noinline)) myPower(int a, int n)
+{
+    int answer;
+
+//    if (n == 0){
+//      answer = 1;
+//    }else{
+//      answer = a * myPower(a, n-1);
+//    }
+
+     asm volatile(
+       //load up our registers for the function call
+       "mov r24, %A1 \n\t" //move a into r24, r25
+       "mov r25, %B1 \n\t"
+       "mov r22, %A2 \n\t" //move n into r22, r23
+       "mov r23, %B2 \n\t"
+       "rcall asmPow%= \n\t" //answer returned in 24,r25
+       "mov %A0, r24 \n\t" //move the answer to variable answer
+       "mov %B0, r25 \n\t"
+       "rjmp over%= \n\t"
+
+       //now the actual function
+       "asmPow%=: nop \n\t"
+       "push r16 \n\t"  //r16,17 will be my local n;
+       "push r17 \n\t" 
+       "push r18\n\t" //local a
+       "push r19 \n\t"
+       "mov r18, r24 \n\t" //move a
+       "mov r19, r25  \n\t"//move a 
+       "mov r16, r22\n\t"//move n
+       "mov r17, r23\n\t" //move n
+       "cpi r16, 0 \n\t" //n==0, bottom of the recursion
+       "breq one%= \n\t"
+        
+        //recurse, load a into 24, 25, load n-1 22,23;
+        "subi r22, 1 \n\t"
+        "rcall asmPow%= \n\t" //find myPower(a,n-1) is in r24, r24
+        //a * myPower(a, n-1)
+        "mul r24, r18 \n\t" //mult low bytes together
+        "mov r16, r0\n\t"
+        "mov r17, r1\n\t" 
+        "mul r24, r19 \n\t" //mult low byte * high byte together
+        "add r17, r0 \n\t"
+        "mul r25, r18 \n\t" //mult high byte * low byte together
+        "add r17, r0 \n\t"
+        "clr r1 \n\t"
+        "mov r24, r16\n\t" //move the answer into 24, 25
+        "mov r25, r17\n\t" 
+        "rjmp over2%= \n\t"
+
+       "one%=: ldi r24, 1 \n\t" //return 1
+       "ldi r25, 0 \n\t"
+       "over2%=: pop r19 \n\t"
+       "pop r18 \n\t"
+       "pop r17 \n\t"
+       "pop r16 \n\t"
+       "ret \n\t"
+      
+      "over%=: nop \n\t" 
+      : "=d" (answer)   //output list
+      : "a" (a) , "a" (n)//input list
+      :    //clobber list
+     );
+    
+    
+    return answer;
+}
+
+int __attribute__ ((noinline)) fibb(int n)
+{
+  int answer;
+  
+//  if (n == 0 || n==1){ //bottom of recursion
+//      answer = 1;
+//   }else{
+//      answer = fibb(n-1) + fibb(n-2);
+//   }
+    
+    asm volatile(
+       //setting up to call my function
+      "mov r24, %A1 \n\t" //move lowbyte of n to r24
+      "mov r25, %B1 \n\t" //move highbyte of n to r25 //setting up to pass to myFact
+      "rcall myFibb%= \n\t"
+      "mov %A0, r24 \n\t" //put the return value in answer
+      "mov %B0, r25 \n\t"
+      "rjmp overF%= \n\t" //jump over the fibb function code
+
+      //the actual function
+      "myFibb%=:  push r20 \n\t" //set up our local n in r21,22
+      "push r21 \n\t" 
+      "push r18 \n\t" //make a temp variable to hold fibb(n-2)
+      "push r19 \n\t" //make a temp variable to hold fibb(n-2)
+      "mov r20, r24\n\t" //store n in our local n
+      "mov r21, r25 \n\t" 
+      "cpi r20, 0 \n\t"
+      "breq ans1%= \n\t" //test for bottom of recursion
+      "cpi r20, 1 \n\t"
+      "breq ans1%= \n\t" //test bottom of recursion
+      //just by luck n is still in r24, 25
+      "sbiw r24, 2 \n\t" //set up n-2
+      "rcall myFibb%= \n\t" //find the answer to fibb(n-2)
+      "mov r18, r24\n\t" //save the answer
+      "mov r19, r25 \n\t"//save the answer to fibb(n-2)
+      "mov r24, r20\n\t" //move n to r24,25
+      "mov r25, r21 \n\t"
+      "sbiw r24, 1 \n\t" //set up n-1
+      "rcall myFibb%= \n\t" //find the answer to fibb(n-1), answer will be in r24,25
+      "add r24, r18\n\t"  //add fibb(n-1) + fibb(n-2)
+      "adc r25, r19\n\t" //still adding
+      "rjmp over%= \n\t" //jump over the code for answer = 1
+      "ans1%=: ldi r24, 1\n\t"
+      "ldi r25, 0\n\t"
+      "over%=: pop r19 \n\t" //restore all the registers
+      "pop r18 \n\t"
+      "pop r21 \n\t"
+      "pop r20 \n\t"
+      "ret \n\t"
+      //end of function
+
+      "overF%=: nop \n\t"
+      : "=d" (answer)   //output list
+      : "a" (n) //input list
+      :    //clobber list
+     );
+
+     
+
+  return answer;
+}
+
+int __attribute__ ((noinline)) mySum(int n)
+{
+    int answer;
+     if ( n == 0){
+       answer = 0;
+     }else{
+        answer = n + mySum(n-1);
+     }
+
+   return answer;
+}
