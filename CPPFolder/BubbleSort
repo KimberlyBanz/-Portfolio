@@ -1,0 +1,176 @@
+
+void  __attribute__ ((noinline)) fillArray(char A[], int n);
+void __attribute__ ((noinline)) sortArray(char A[], int n);
+
+void printArray(char a[], int n);
+
+void setup() {
+
+     char a[20] = {0}; 
+     int n = 20;
+  // put your setup code here, to run once:
+    Serial.begin(9600);
+    randomSeed(analogRead(1)); //get a different set of numbers each time
+    fillArray(a, n);
+    printArray(a, n);
+   
+    sortArray(a,n);
+    printArray(a, n);
+
+    
+}
+
+void loop() {
+   
+  // put your main code here, to run repeatedly:
+
+}
+
+void fillArray(char A[], int n)
+{
+  int i;
+  for(i = 0; i < n; ++i)
+  {
+    A[i] = random(1,100);
+  }
+   
+}
+
+void printArray(char a[], int n)
+{
+  int i;
+  for(i = 0; i < n; ++i)
+  {
+    Serial.print((int ) a[i]); 
+    Serial.print(" ");
+  }
+   Serial.println();
+   
+//   for(i = 0; i < n; ++i)
+//  {
+//    int addr = &a[i]; //store the address
+//    Serial.print(addr, HEX); 
+//    Serial.print(" ");
+//  }
+//
+//  Serial.println();
+}
+
+
+/*
+ *  I fixed it so the function almost works, still a bug
+ *  see if you can fix it! 
+ * 
+ * 
+ */
+
+void reverseArray(char A[], int n)
+{
+  asm volatile(
+  
+      "movw r30, %0 \n\t" //move A (address of array) to z register
+      "movw r26, r30 \n\t" //keep a pointer to the beginning of the array
+
+      //first looop
+      "ldi r19, 0 \n\t" //upper byte of the counter
+      "ldi r18,0 \n\t" //i, the loop counter
+      //push the array on the stack
+      "top%=: cp r18, %A1 \n\t" // compare to n
+      "cpc r19, %B1 \n\t" //compare the high bytes
+      "breq done%= \n\t" //loop is done
+      
+      "ld r24, z+ \n\t" //load the low byte, move z to the next byte
+      "push r24 \n\t"
+
+      "ldi r16, 1 \n\t" //loop increment
+      "add r18,r16 \n\t" //increment i
+      "adc r19, r1 \n\t" //r1 should be zero!
+      "rjmp top%= \n\t"
+      "done%=: nop \n\t"
+
+      //now pop off
+      "movw r30, r26 \n\t" //move z back to the beginning of the array
+      "ldi r19, 0 \n\t" //upper byte of the counter
+      "ldi r18,0 \n\t" //i, the loop counter
+      "top2%=: cp r18, %A1 \n\t" // compare to n
+      "cpc r19, %B1 \n\t" //compare the high bytes
+      "breq done2%= \n\t" //loop is done
+      
+      "pop r24 \n\t"
+      "st z+, r24 \n\t" //load the low byte, move z to the next byte
+    
+     
+      
+      "ldi r16, 1 \n\t" //loop increment
+      "add r18,r16 \n\t" //increment i
+      "adc r19, r1 \n\t" //r1 should be zero!
+      "rjmp top2%= \n\t"
+      "done2%=: nop \n\t"
+ 
+      :               //output list
+      : "r" (A), "r" (n)  //input list
+      : "r16", "r24", "r25" , "r30", "r31", "r26", "r27"
+      );
+}
+
+void sortArray(char A[], int n)
+{
+    
+    int temp, i, j;
+    char *p;
+
+// for (i = 0; i < n-1; ++i){
+//    //inner loop 
+//    p = A;
+//    for(j = 0; j < n-1; ++j)
+//    {
+//        if (*p > *(p+1) ){
+//            temp = A[j];
+//            A[j] = A[j+1];
+//            A[j+1] = temp;
+//        }
+//    }//for j
+// }//for i
+ 
+ asm volatile(
+  
+    
+
+       "movw r30, %A0 \n\t" //z points to the beginning of the array
+       
+      "ldi r20, 1 \n\t" //i,outer loop counter
+      "itop%=: cp r20, %A1 \n\t" 
+      "breq idone%= \n\t" //loop is done
+       "push r30 \n\t"
+       "push r31 \n\t"
+      
+      "ldi r18,1 \n\t" //j, the loop counter
+      "top%=: cp r18, %A1 \n\t" // compare to n
+      "breq done%= \n\t" //loop is done
+      "ld r24, z \n\t" // r24 holds  A[j]
+      "ldd r25, z+1 \n\t" // r25 holds  A[j + 1]
+      "cp r25, r24 \n\t" // find who is bigger
+      "brge else%=\n\t" //no swap
+      "st z, r25 \n\t"  //swap
+      "std z+1, r24 \n\t"
+      "else%=: nop\n\t"
+      "adiw z,1 \n\t" //point to the next element in A   
+      "inc r18 \n\t" //increment j
+      "rjmp top%= \n\t"
+      "done%=: nop \n\t"
+
+      "pop r31 \n\t"
+      "pop r30 \n\t"
+
+      "inc r20 \n\t" //increment i
+      "rjmp itop%= \n\t"
+      "idone%=: nop \n\t"
+     
+
+
+      :               //output list
+      : "r" (A), "r" (n)  //input list
+      : "r24", "r25" , "r30", "r31", "r18", "r20"
+      );
+  
+}
