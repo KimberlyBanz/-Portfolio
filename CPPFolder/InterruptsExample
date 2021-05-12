@@ -1,0 +1,76 @@
+/*
+    This example illustrates using interrupts on the Arduino
+
+      1. Setting up a vector
+ */
+
+
+
+
+
+#include <avr/interrupt.h>
+
+
+void setup() {
+    pinMode(2, INPUT);
+    pinMode(13, OUTPUT);
+ 
+    sei();                    // Enable global interrupts
+    EIMSK |= (1 << INT0);     // Enable external interrupt INT0
+    EICRA |= (1 << ISC01);    // Trigger INT0 on falling edge
+    
+    
+    //set timer1 interrupt at 1Hz
+  TCCR1A = 0;// set entire TCCR1A register to 0
+  TCCR1B = 0;// same for TCCR1B
+  TCNT1  = 0;//initialize counter value to 0
+  // set compare match register for 1hz increments
+  OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS12 and CS10 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+ int  buttonState = digitalRead(2);
+Serial.println(TCNT1);
+delay(10000);
+Serial.print("Millis :");
+Serial.println(millis());
+  // check if the pushbutton is pressed.
+  // if it is, the buttonState is HIGH:
+  if (buttonState == HIGH) {     
+    // turn LED on:    
+   //digitalWrite(13, HIGH);  
+  } 
+  else {
+    // turn LED off:
+    //digitalWrite(13, LOW); 
+  }
+}
+
+volatile int count = 0;
+// Interrupt Service Routine attached to INT0 vector
+ISR(INT0_vect)
+{
+  
+  Serial.print("in into ");
+   Serial.println(count);
+    digitalWrite(13, !digitalRead(13));    // Toggle LED on pin 13
+}
+
+volatile int tick = 0;
+
+ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
+ 
+ ++tick;
+ count++;
+ // digitalWrite(13, !digitalRead(13));
+  Serial.println(count);
+ //  Serial.println(TCNT1);
+}
