@@ -1,0 +1,254 @@
+/*
+ *  First Assembly Language Examples
+ *  Arithemetic and branch instructions
+ *  https://www.godbolt.org
+ * 
+ */
+
+int __attribute__ ((noinline)) addTwo(int a, int b); //do in class
+int __attribute__ ((noinline)) subTwo(int a, int b); //assign
+int __attribute__ ((noinline)) multTwo(int a, int b);//we will do in class
+int __attribute__ ((noinline)) divTwo(int a, int b); //talk about later
+
+
+
+int __attribute__ ((noinline)) lessThen(int a, int b); //in class
+int __attribute__ ((noinline)) greaterThen(int a, int b);//in class 
+
+//these are the four to finish, please add code in setup to test each one
+
+int __attribute__ ((noinline)) greaterOrEqual(int a, int b);
+int __attribute__ ((noinline)) equal(int a, int b);
+int __attribute__ ((noinline)) notEqual(int a, int b);
+int __attribute__ ((noinline)) lessOrEqual(int a, int b);
+
+
+void __attribute__ ((noinline)) setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+  int a = 24, b = 25;
+  int i;
+  int result;
+  char string[80];
+
+do{
+  Serial.println("enter a and b");
+  do{
+    a = Serial.parseInt();
+  }while (a == 0);
+  
+  do{
+    b = Serial.parseInt();
+  }while(b == 0);
+
+  //add two
+  result = addTwo(a, b);
+  sprintf(string, "%d = %d + %d", result, a, b);
+  Serial.println(string);
+  Serial.println(" ");
+
+  //sub two
+  result = subTwo(a, b);
+  sprintf(string, "%d = %d - %d", result, a, b);
+  Serial.println(string);
+  Serial.println(" ");
+
+  //mult two
+  result = multTwo(a, b);
+  sprintf(string, "%d = %d * %d", result, a, b);
+  Serial.println(string);
+  Serial.println(" ");
+
+//try greater then
+  result = greaterThen(a, b);
+  sprintf(string, "%d = %d > %d", result, a, b);
+  Serial.println(string);
+  Serial.println(" ");
+
+  //try less then
+  result = lessThen(a, b);
+  sprintf(string, "%d = %d < %d", result, a, b);
+  Serial.println(string);
+  Serial.println(" ");
+  
+ }while (true);
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+
+int __attribute__ ((noinline))  addTwo(int a, int b)
+{
+    int result;
+
+ //   result = a + b;
+    
+    asm volatile(
+          "mov  %A0, %A1 \n\t" //move the low byte of a into the low byte result
+          "mov  %B0, %B1 \n\t" //move the high byte of a into the high byte result
+          "add  %A0, %A2 \n\t" //add the low bytes together
+          "adc  %B0, %B2 \n\t" //add the high bytes together, plus the previous carry
+          : "=d" (result)   //output list
+          : "d" (a), "d" (b)  //input list
+          :             //clobber list 
+     );
+   
+
+     return result;
+}
+
+int __attribute__ ((noinline)) subTwo(int a, int b)
+{
+    int result = a - b;
+    return result;
+}
+
+int __attribute__ ((noinline)) multTwo(int a, int b)
+{
+   int result;
+   
+ //  result = a * b;
+
+    asm volatile(
+          "mul %A1, %A2 \n\t" //multiply the two low bytes together, answer in r1, r0
+          "mov  r18, r0 \n\t" //move the low byte of the answer into the low byte result
+          "mov  r19, r1 \n\t" //move the high byte of the answer the high byte result
+          "mul %B1, %A2 \n\t" //multiply the high byte of a times low byte of b  answer in r1, r0
+          "add r19, r0 \n\t" //add the low byte of the result to the hing byte of result --shifted
+          "mul %A1, %B2 \n\t" //multiply the low  byte of a times hihg byte of b  answer in r1, r0
+          "add r19, r0 \n\t" //add the low byte of the result to the high byte of result --shifted
+           "mov  %A0, r18 \n\t"
+           "mov  %B0, r19 \n\t"
+          "clr  r1 \n\t"    //cleanup 
+          : "=d" (result)   //output list
+          : "d" (a), "d" (b)  //input list
+          : "r18", "r19"            //clobber list 
+     );
+  
+ 
+     return result;
+}
+
+int __attribute__ ((noinline)) divTwo(int a, int b)
+{
+  int result = a / b;
+    return result;
+}
+
+int __attribute__ ((noinline)) lessOrEqual(int a, int b)
+{
+  int result;
+   if (a <= b){
+      result = 1;
+   }else{
+      result = 0;
+   }
+
+
+   
+    return result;
+}
+
+
+int __attribute__ ((noinline)) greaterThen(int a, int b)
+{
+  int result; 
+ /* if (a > b){
+      result = 1;
+   }else{
+      result = 0;
+   }
+   */
+
+    asm volatile(
+          "cp  %A2,%A1 \n\t" //compare the low byte of b against a
+          "cpc %B2,%B1 \n\t"    //compare  the high bytes with the carry
+          "brge else%= \n\t"
+          "ldi %A0, 1  \n\t"   //pass back true
+          "rjmp over%= \n\t"  //jump over the else
+          "else%=: ldi %A0,0 \n\t" //pass back false
+          "over%=: ldi %B0, 0  \n\t" //
+          : "=d" (result)   //output list
+          : "d" (a), "d" (b)  //input list
+          :             //clobber list 
+     );
+
+  return result;
+}
+
+//these are the four to finish, please add code in setup to test each one
+int __attribute__ ((noinline)) lessThen(int a, int b)
+{
+  int result;
+//   if (a < b){
+//      result = 1;
+//   }else{
+//      result = 0;
+//   }
+      asm volatile(
+          "cp %A1,%A2 \n\t" //low bytes,  a-b 
+          "cpc %B1, %B2 \n\t" //high bytes, a -b
+          "brlt then%= \n\t"
+          "ldi %A0, 0  \n\t"   //pass back false
+          "rjmp over%= \n\t"  //jump over the else
+          "then%=: ldi %A0,1 \n\t" //pass back true
+          "over%=: ldi %B0, 0  \n\t" //fill in the high byte of the answer 
+          : "=d" (result)   //output list
+          : "d" (a), "d" (b)  //input list
+          :             //clobber list 
+     );
+
+   
+    return result;
+}
+int __attribute__ ((noinline)) greaterOrEqual(int a, int b)
+{
+  int result;
+   if (a >= b){
+      result = 1;
+   }else{
+      result = 0;
+   }
+    return result;
+}
+int __attribute__ ((noinline)) equal(int a, int b)
+{
+  int result;
+   if (a == b){
+      result = 1;
+   }else{
+      result = 0;
+   }
+    return result;
+}
+int __attribute__ ((noinline)) notEqual(int a, int b)
+{
+  int result;
+   if (a != b){
+      result = 1;
+   }else{
+      result = 0;
+   }
+    return result;
+}
+
+//we will do in class. this is for looping
+int __attribute__ ((noinline)) sum1toN(int n)
+{
+   int i, sum = 0;
+   for(i = 1; i <= n; ++i)
+   {
+       sum += i;
+   }
+   return sum;
+}
+
+
+
+
+
+ 
