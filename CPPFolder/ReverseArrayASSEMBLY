@@ -1,0 +1,232 @@
+/*
+ *  CSCI 2021 
+ *  Addressing Modes 
+ *  Working with Arrays in Assembly Language 
+ * 
+ * 
+ * 
+ * 
+ */
+void  __attribute__ ((noinline)) fillArray(int a[], int n);
+void  __attribute__ ((noinline)) fillArrayby25s(int a[], int n);
+void  __attribute__ ((noinline)) fillArrayPerfectSquares(int a[], int n);
+void  __attribute__ ((noinline)) fillArrayPowersOf2(int a[], int n);
+void __attribute__ ((noinline)) reverseArray(int A[], int n);
+void __attribute__ ((noinline)) reverseArray2(int A[], int n);
+
+
+
+void setup() {
+
+     int a[20] = {0}; 
+     int n = 20;
+  // put your setup code here, to run once:
+    Serial.begin(9600);
+    Serial.println("fill by 10's");
+    fillArray(a, n);
+    printArray(a, n);
+    reverseArray2(a,n);
+     printArray(a, n);
+    
+ //   Serial.println("fill by 25's");
+  //  fillArrayby25s(a, n);
+ //   printArray(a, n);
+  //  reverseArray(a,n);
+  //  printArray(a, n);
+//    Serial.println("fill by squares's");
+//    fillArrayPerfectSquares(a, n);
+//    printArray(a, n);
+//    Serial.println("fill by powers of 2");
+//    fillArrayPowersOf2(a, n);
+//    printArray(a, n);
+}
+
+void loop() {
+
+   
+  // put your main code here, to run repeatedly:
+
+}
+
+void fillArray(int A[], int n)
+{
+  int i, fill = 10;
+//  for(i = 0; i < n; ++i)
+//  {
+//      A[i] = fill;
+//      fill += 10;
+//  }
+    asm volatile(
+      "movw r30, %A0 \n\t" //z now point to the beginning of the array
+      "ldi r18,0 \n\t" //i, the loop counter
+      "ldi r24, 10 \n\t" //init to ten
+      "ldi r25, 0 \n\t"
+      "top%=: cp r18, %A1 \n\t" // compare to n
+      "breq done%= \n\t" //loop is done
+      "st z+, r24 \n\t" //store the low byte of fill, in memory pointed to by z
+      "st z+, r25 \n\t" //store the high byte of fill
+      "adiw r24,10 \n\t" //fill += 10
+      "inc r18 \n\t" //increment i
+      "rjmp top%= \n\t"
+      "done%=: nop \n\t"
+      :               //output list
+      : "r" (A), "r" (n)  //input list
+      : "r18", "r19", "r24", "r25" , "r30", "r31"
+      );
+}
+
+void printArray(int a[], int n)
+{
+  int i;
+  for(i = 0; i < n; ++i)
+  {
+    Serial.print(a[i]); 
+    Serial.print(" ");
+  }
+   Serial.println();
+  
+//  for(i = 0; i < n; ++i)
+//  {
+//    int addr = &a[i]; 
+//    Serial.print(addr, HEX); 
+//    Serial.print(" ");
+//  }
+//   Serial.println();
+   
+
+}
+
+void   fillArrayby25s(int A[], int n)
+{
+  int i, fill = 25;
+   for(i = 0; i < n; ++i)
+   {
+     A[i] = fill;
+     fill +=25;
+   }
+}
+
+void  fillArrayPerfectSquares(int a[], int n)
+{
+  int i, fill = 1;
+   for(i = 0; i < n; ++i)
+   {
+    fill = (i+1) * (i+1);
+     a[i] = fill;
+   }
+}
+void fillArrayPowersOf2(int A[], int n)
+{
+  int i, fill = 1;
+ for(i = 0; i < n; ++i)
+   {
+     A[i] = fill;
+     fill *= 2;
+   }
+}
+
+
+void reverseArray(int A[], int n)
+{
+    int stack[40], top = 0;
+    int i;
+ 
+//    for(i = 0; i < n; ++i){
+//      stack[top] = A[i]; //push
+//      top++;
+//    }
+//
+//    for(i = 0; i < n; ++i){
+//      --top;
+//      A[i] = stack[top]; //pop
+//    }
+
+
+     asm volatile(
+      "movw r30, %A0 \n\t" //z now point to the beginning of the array
+      "ldi r18,0 \n\t" //i, the loop counter
+      "top%=: cp r18, %A1 \n\t" // compare to n
+      "breq done%= \n\t" //loop is done
+     "ld r24, z+  \n\t" //load the low byte of the array, in memory pointed to by z
+     "ld r25, z+  \n\t" //load the high byte of f
+     "push r24 \n\t" //push 
+      "push r25 \n\t" //push onto the system stack
+      "inc r18 \n\t" //increment i
+      "rjmp top%= \n\t"
+      "done%=: nop \n\t" //end of loop
+      
+      "movw r30, %A0 \n\t" //z now point to the beginning of the array
+      "ldi r18,0 \n\t" //i, the loop counter
+      "top1%=: cp r18, %A1 \n\t" // compare to n
+       "breq done1%= \n\t" //loop is done
+  
+      //now pop off the stack and put back in array
+      "pop r25 \n\t" //pop A[i] off the stack , high byte first
+      "pop r24 \n\t" //low
+      "st z, r24  \n\t" //move the low byte of the array, in memory pointed to by z
+      "std z+1, r25  \n\t" //move the high byte of f
+      "adiw z, 2 \n\t" //move to the next array element
+  
+      "inc r18 \n\t" //increment i
+      "rjmp top1%= \n\t"
+      "done1%=: nop \n\t" //end of loop
+      :               //output list
+      : "r" (A), "r" (n)  //input list
+      : "r18", "r19", "r24", "r25" , "r30", "r31"
+      );
+
+
+}
+
+void reverseArray2(int A[], int n)
+{
+   int *p_start, *p_end;
+   int temp, temp2;
+   
+    p_start = A;
+    p_end = A + n-1;
+ 
+//    while(p_start < p_end){
+//      temp1 = *p_start;
+//      temp2 = *p_end;
+//      *p_start = temp2;
+//      *p_end= temp;
+//
+//      ++p_start;
+//      --p_end;
+//    }
+
+
+     asm volatile(
+      "movw r30, %A0 \n\t" //z now point to the beginning of the array
+      "movw r28, %A0 \n\t" //y now point to the beginning of the array
+      "add r28, %A1  \n\t" 
+      "adc r29, %B1  \n\t" //added n
+      "add r28, %A1  \n\t" 
+      "adc r29, %B1  \n\t" //added 2*n to the address
+      "subi r28, 2 \n\t"
+      "sbc r29, r1 \n\t" //finally y point point end of the array
+      "top%=: cp r30, r28 \n\t"
+      "cpc r31, r29 \n\t" 
+      "brge done%= \n\t"
+      "ld r20, y \n\t" //load the low byte from the end of the array
+      "ldd r21, y + 1 \n\t" //load the high byte
+
+      "ld r18, z \n\t" //load the low byte, z points to the beginning
+      "ldd r19, z + 1 \n\t" //load the high byte
+
+       "st z, r1 \n\t
+       "std z+1, r1 \n\t"
+      
+      "adiw z, 2 \n\t" //move z up
+      "subi r28, 2 \n\t"
+      "sbc r29, r1 \n\t" //move y down
+
+      "rjmp top%= \n\t"
+      "done%=: nop \n\t" //loop is done
+      :               //output list
+      : "r" (A), "r" (n)  //input list
+      : "r18", "r19", "r24", "r25" , "r30", "r31", "r28", "r29", "r20", "r21"
+      );
+
+}
